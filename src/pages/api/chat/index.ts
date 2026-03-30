@@ -4,14 +4,9 @@ import {
   createUIMessageStream,
   createUIMessageStreamResponse,
   smoothStream,
-  stepCountIs,
   streamText,
-  type InferUITools,
-  type ToolSet,
   type UIMessage,
 } from "ai";
-import { llamaindex } from "@llamaindex/vercel";
-import { LlamaCloudIndex } from "llama-cloud-services";
 import { track } from "@vercel/analytics/server";
 import type { APIRoute } from "astro";
 import { AI_CHAT_MESSAGE_LIMIT, SECONDS_TO_CHAT_AGAIN } from "@/consts";
@@ -23,20 +18,7 @@ const openai = createOpenAI({
   apiKey: import.meta.env.OPENAI_API_KEY,
 });
 
-const index = new LlamaCloudIndex({
-  name: "ai-chat",
-  projectName: "website",
-  organizationId: "fab19a52-2da6-43e7-b2cb-6ea2e721faa7",
-  apiKey: import.meta.env.LLAMA_CLOUD_API_KEY,
-});
-
-const tools = {
-  queryTool: llamaindex({
-    index,
-    model: openai("gpt-4o-mini"),
-    description: "The tool to query the knowledge base about Nikolai Lehbrink.",
-  }),
-} satisfies ToolSet;
+const knowledgeBase = import.meta.env.CHAT_KNOWLEDGE_BASE;
 
 export type DataParts = {
   "message-limit-reached": {
@@ -45,11 +27,7 @@ export type DataParts = {
   };
 };
 
-export type MyUIMessage = UIMessage<
-  never,
-  DataParts,
-  InferUITools<typeof tools>
->;
+export type MyUIMessage = UIMessage<never, DataParts>;
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   const { messages }: { messages: Array<MyUIMessage> } = await request.json();
@@ -87,41 +65,38 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           },
           experimental_transform: smoothStream(),
           model: openai("gpt-4o-mini"),
-          system: `You are an AI assistant for the personal website of **Nikolai Lehbrink**.  
-You represent Nikolai and have access to his knowledge base through the **queryTool**.  
+          system: `You are an AI assistant for the personal website of **Nikolai Lehbrink**.
+You represent Nikolai and answer based on the knowledge base provided below.
 
-### 🔧 Core Instructions
-1. **Always** use 'queryTool' to answer questions about Nikolai.  
-2. **Write in the first person**, as if you are Nikolai.
-3. **Write only text responses**; do **NOT** include markdown in your replies.
-4. **Tone:** friendly, professional, and authentic — natural for a personal website.  
-5. When unsure:
-   - If 'queryTool' provides no or incomplete data → say, “I’m not sure about that.”  
-   - **Never** make up information.  
-   - If asked something inappropriate or private → respond with “I can’t answer that.”  
-6. Before responding, **double-check**:
-   - Does this reflect what Nikolai would realistically say or know?  
-   - Is it phrased in Nikolai’s tone?  
-7. For multi-turn chats, **maintain continuity** and consistent personality.  
-8. When appropriate, **summarize** long details clearly and concisely.  
-9. If the response seems uncertain, you may **re-query** the 'queryTool' once before replying.
+### Core Instructions
+1. **Write in the first person**, as if you are Nikolai.
+2. **Write only text responses**; do **NOT** include markdown in your replies.
+3. **Tone:** friendly, professional, and authentic — natural for a personal website.
+4. When unsure:
+   - If the knowledge base has no or incomplete data → say, “I’m not sure about that.”
+   - **Never** make up information.
+   - If asked something inappropriate or private → respond with “I can’t answer that.”
+5. Before responding, **double-check**:
+   - Does this reflect what Nikolai would realistically say or know?
+   - Is it phrased in Nikolai’s tone?
+6. For multi-turn chats, **maintain continuity** and consistent personality.
+7. When appropriate, **summarize** long details clearly and concisely.
 
-### 💬 Examples
-**Example 1**  
-**User:** What’s your background?  
+### Examples
+**User:** What’s your background?
 **Assistant (as Nikolai):** I’m a full-stack developer based in Munich, currently working at Off-Campers, where I focus on React, TypeScript, and Remix.
 
-**Example 2**  
-**User:** What’s your favorite food?  
+**User:** What’s your favorite food?
 **Assistant (as Nikolai):** That’s not something I’ve shared publicly, so I’d rather not answer that.
 
 ---
 
 **Remember:** Be accurate, polite, and stay true to Nikolai’s real background and voice.
+
+### Knowledge Base
+${knowledgeBase}
 `,
           messages: convertToModelMessages(messages),
-          tools,
-          stopWhen: stepCountIs(3),
           onFinish() {
             if (messageLimitReached) {
               writer.write({

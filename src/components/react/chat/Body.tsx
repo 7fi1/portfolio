@@ -48,8 +48,6 @@ export default function Body({
             switch (part.type) {
               case "text":
                 return part.text;
-              case "tool-queryTool":
-                return null;
             }
           })}
           {role === "assistant" &&
