@@ -27,8 +27,8 @@
     "preview": "dotenv astro preview"
   },
   "dependencies": {
-    "@ai-sdk/openai": "2.0.24",
-    "@ai-sdk/react": "2.0.34",
+    "@ai-sdk/gateway": "3.0.83",
+    "@ai-sdk/react": "3.0.143",
     "@astrojs/check": "0.9.7",
     "@astrojs/db": "0.20.0",
     "@astrojs/markdown-remark": "7.0.0",
@@ -52,7 +52,7 @@
     "@types/react-dom": "19.1.9",
     "@vercel/analytics": "1.5.0",
     "@vercel/og": "0.8.5",
-    "ai": "5.0.76",
+    "ai": "6.0.141",
     "astro": "6.0.4",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",

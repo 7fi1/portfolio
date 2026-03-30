@@ -1,4 +1,4 @@
-import { createOpenAI } from "@ai-sdk/openai";
+import { createGateway } from "@ai-sdk/gateway";
 import {
   convertToModelMessages,
   createUIMessageStream,
@@ -14,8 +14,8 @@ import { AI_CHAT_MESSAGE_LIMIT, SECONDS_TO_CHAT_AGAIN } from "@/consts";
 export const maxDuration = 30;
 export const prerender = false;
 
-const openai = createOpenAI({
-  apiKey: import.meta.env.OPENAI_API_KEY,
+const gateway = createGateway({
+  apiKey: import.meta.env.AI_GATEWAY_API_KEY,
 });
 
 const knowledgeBase = import.meta.env.CHAT_KNOWLEDGE_BASE;
@@ -58,13 +58,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     const stream = createUIMessageStream<MyUIMessage>({
-      execute({ writer }) {
+      async execute({ writer }) {
         const result = streamText({
           onError: (error) => {
             console.error("Error:", error);
           },
           experimental_transform: smoothStream(),
-          model: openai("gpt-4o-mini"),
+          model: gateway("openai/gpt-5.4-mini"),
           system: `You are an AI assistant for the personal website of **Nikolai Lehbrink**.
 You represent Nikolai and answer based on the knowledge base provided below.
 
@@ -96,7 +96,7 @@ You represent Nikolai and answer based on the knowledge base provided below.
 ### Knowledge Base
 ${knowledgeBase}
 `,
-          messages: convertToModelMessages(messages),
+          messages: await convertToModelMessages(messages),
           onFinish() {
             if (messageLimitReached) {
               writer.write({
